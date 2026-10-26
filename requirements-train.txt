@@ -1,0 +1,4 @@
+-r requirements.txt
+datasets>=2.19
+accelerate>=0.30
+matplotlib

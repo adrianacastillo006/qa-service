@@ -1,0 +1,10 @@
+# Serving (laptop, CPU)
+torch>=2.2
+transformers>=4.46
+fastapi>=0.110
+uvicorn[standard]>=0.29
+numpy
+requests
+# Tests
+pytest
+httpx

@@ -1,0 +1,16 @@
+# Secrets: never commit the token
+.env
+
+# Model weights stay out of git (share them via a GitHub Release or a shared folder)
+model/
+checkpoints/
+*.safetensors
+*.bin
+*.pt
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
