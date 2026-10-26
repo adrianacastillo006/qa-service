@@ -168,7 +168,7 @@ def main():
         num_train_epochs=args.epochs,
         learning_rate=args.lr,
         lr_scheduler_type="linear",
-        warmup_ratio=args.warmup_ratio,
+        warmup_steps=args.warmup_ratio,
         weight_decay=0.01,
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size * 2,
