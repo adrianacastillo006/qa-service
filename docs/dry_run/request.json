@@ -1,0 +1,5 @@
+{
+  "id": "sample-02",
+  "context": "The Transformer, proposed in the 2017 paper \"Attention Is All You Need\", replaced recurrence with attention. Its core operation, scaled dot-product attention, computes the dot products of a query with all keys and divides each of them by the square root of the key dimension before applying a softmax. The authors trained their base model for 100,000 steps, about 12 hours, on eight NVIDIA P100 GPUs, while the big model was trained for 3.5 days.",
+  "question": "How long was the big Transformer model trained?"
+}

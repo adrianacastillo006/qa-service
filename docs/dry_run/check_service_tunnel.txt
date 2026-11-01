@@ -1,0 +1,21 @@
+== Contract tests ==
+[PASS] 1 /health no token {"status":"ok"}
+[PASS] 2 /info no token 401
+[PASS] 3 /info wrong token 401
+[PASS] 4 /info valid token {"team": "team-XX", "model": "roberta-base", "params": 124056578, "max_seq_length": 384, "doc_stride": 128}
+[PASS] extra: missing field -> 400 {"error":"bad_request","detail":"field 'question' is required"}
+[PASS] extra: /predict no token -> 401 401
+
+== Public sample set ==
+id         expected               answer                 start     ms  ok
+sample-01  16                     16                       383    780  OK
+sample-02  3.5 days               3.5 days                 437    823  OK
+sample-03  null                   None                    None   1877  OK
+sample-04  null                   3 times                  310   1370  X
+sample-05  50,257                 50,257                  3157    883  OK
+
+EM=0.80  F1=0.80
+Latency ms: mean=1148 p95=1877 max=3281
+Projected time for 50 items: 57.4s (cap 150s)
+
+ALL CONTRACT CHECKS PASSED
