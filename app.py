@@ -43,7 +43,9 @@ def load_engine() -> None:
         from qa_engine import QAEngine
         t0 = time.time()
         engine = QAEngine(MODEL_DIR, device=QA_DEVICE)
-        engine.predict("Warm-up?", "Warm-up context.")   # first call is slower; do it now
+        # first calls are slower; warm up with a short and a ~5000-char (multi-window) input
+        engine.predict("Warm-up?", "Warm-up context.")
+        engine.predict("Warm-up?", "Warm-up context. " * 300)
         state["engine"] = engine
         log.info("Model loaded from %s on %s in %.1fs (%d params, threshold=%.3f)",
                  MODEL_DIR, engine.device, time.time() - t0, engine.n_params, engine.threshold)
