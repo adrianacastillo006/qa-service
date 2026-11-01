@@ -27,7 +27,7 @@ flowchart LR
 
 ## 3. El modelo: un encoder Transformer
 
-Usamos **DistilBERT**, una versión reducida de BERT (6 capas en vez de 12, 66 M parámetros). Es un **encoder**: lee toda la entrada a la vez y produce un vector por cada token, que "entiende" su contexto en ambas direcciones (atención bidireccional).
+Usamos **RoBERTa-base** (`roberta-base`: 12 capas, 124 M parámetros), una versión de BERT pre-entrenada con más datos y más tiempo. Es un **encoder**: lee toda la entrada a la vez y produce un vector por cada token, que "entiende" su contexto en ambas direcciones (atención bidireccional).
 
 El modelo pre-entrenado sabe inglés, pero no sabe responder preguntas. El **fine-tuning** le agrega una capa lineal muy pequeña encima que, para cada token, produce dos números:
 
@@ -40,7 +40,7 @@ La entrada que ve el modelo tiene esta forma:
 [CLS] pregunta [SEP] párrafo [SEP]
 ```
 
-El token especial **`[CLS]`** (posición 0) se usa como "no hay respuesta": en SQuAD 2.0, a las preguntas sin respuesta se les enseña que el inicio y el final son `[CLS]`.
+El token especial **`[CLS]`** (posición 0) se usa como "no hay respuesta": en SQuAD 2.0, a las preguntas sin respuesta se les enseña que el inicio y el final son `[CLS]`. En RoBERTa los tokens especiales se llaman `<s>` y `</s>`, pero cumplen el mismo papel; el código no depende del nombre porque busca `tokenizer.cls_token_id`.
 
 ## 4. Entrenamiento (`train.py`)
 
@@ -52,7 +52,7 @@ El token especial **`[CLS]`** (posición 0) se usa como "no hay respuesta": en S
 
 ## 5. Inferencia (`qa_engine.py`), paso a paso
 
-1. **Tokenizar en ventanas** (`_encode`): misma configuración que en el entrenamiento (384 / 128). Un contexto de 5000 caracteres produce ~4–5 ventanas. Así **no se pierde información** de contextos largos (como `sample-05`, de más de 512 tokens).
+1. **Tokenizar en ventanas** (`_encode`): misma configuración que en el entrenamiento (384 / 128). Un contexto de 5000 caracteres produce ~4–6 ventanas (6 si la pregunta también es larga). Así **no se pierde información** de contextos largos (como `sample-05`, de más de 512 tokens).
 2. **Pasar todas las ventanas juntas** por el modelo (`_logits`) en modo `inference_mode` (sin gradientes, más rápido).
 3. **Buscar el mejor span** (`raw_scores`): en cada ventana se toman los 20 mejores inicios y los 20 mejores finales, y se descartan combinaciones inválidas:
    - que caigan en la pregunta o en tokens especiales,
@@ -77,6 +77,8 @@ Si siempre respondemos un span, fallamos todas las preguntas sin respuesta (~25 
 
 En `tune_threshold` (dentro de `train.py`), para 2000 preguntas de validación se calcula una vez `diff = null_score − best_span_score`. Luego se prueban todos los umbrales posibles y se elige el que da **mayor F1**. El valor queda guardado en `model/qa_meta.json` y la API lo lee al arrancar.
 
+**Ajuste por proporción de preguntas sin respuesta:** el dev de SQuAD 2.0 tiene ~50 % de preguntas sin respuesta, pero el examen tiene ~25 %. Si eligiéramos el umbral con el dev tal cual, el modelo diría `null` demasiado seguido. Por eso cada pregunta de validación se pondera para que las sin respuesta pesen 25 % (`--target_unanswerable 0.25`). Con RoBERTa el umbral pasó de −2.09 (sin ponderar) a **+1.33**. Para recalcularlo sin reentrenar: `python train.py --tune_only --output_dir model --base_model roberta-base --logs_dir logs/roberta-base`.
+
 Detalle importante: el umbral se calcula **con el mismo código que usa la API** (`QAEngine.raw_scores`), así que no hay diferencias entre lo que medimos y lo que servimos.
 
 - **Umbral muy bajo** → demasiados `null` → perdemos preguntas con respuesta.
@@ -90,7 +92,7 @@ Detalle importante: el umbral se calcula **con el mismo código que usa la API**
 | `GET /info` | Sí | Equipo, modelo base, número de parámetros, 384, 128 |
 | `POST /predict` | Sí | `{"id","answer","start","score"}` |
 
-**Carga del modelo:** al arrancar, un hilo en segundo plano (`load_engine`) carga el modelo y hace una predicción de calentamiento. Mientras tanto el servidor ya responde `/health` con 503.
+**Carga del modelo:** al arrancar, un hilo en segundo plano (`load_engine`) carga el modelo y hace dos predicciones de calentamiento (una corta y una de ~5000 caracteres, para que la primera petición larga real no sea lenta). Mientras tanto el servidor ya responde `/health` con 503.
 
 **Flujo de `/predict`:**
 
@@ -109,7 +111,7 @@ Detalle importante: el umbral se calcula **con el mismo código que usa la API**
 
 ## 8. El túnel
 
-El servicio corre en la laptop (CPU). `ngrok http 8000` crea una URL pública HTTPS que reenvía las peticiones a `localhost:8000`. Como esa URL es pública, cualquiera podría llamar al servicio: por eso existe el token.
+El servicio corre en la laptop: usa la GPU si existe y si no la CPU (se puede forzar con `QA_DEVICE=cpu`). `ngrok http 8000` crea una URL pública HTTPS que reenvía las peticiones a `localhost:8000`. Como esa URL es pública, cualquiera podría llamar al servicio: por eso existe el token.
 
 ## 9. ¿Por qué no un decoder (GPT)?
 
@@ -132,7 +134,7 @@ Para que una respuesta que caería cortada en el borde de una ventana aparezca c
 Con `offset_mapping`: para cada token el tokenizer guarda `(char_inicio, char_fin)` en el texto original. Tomamos el `char_inicio` del token inicial y el `char_fin` del token final.
 
 **¿Cómo deciden devolver null?**
-Comparan el puntaje de `[CLS]` con el del mejor span: si `null_score − best_span_score > umbral`, devuelven null. El umbral se eligió maximizando F1 en 2000 preguntas de validación.
+Comparan el puntaje de `[CLS]` con el del mejor span: si `null_score − best_span_score > umbral`, devuelven null. El umbral (+1.33) se eligió maximizando F1 en 2000 preguntas de validación, ponderadas para que 25 % sean sin respuesta como en el examen.
 
 **¿Qué pasa si llega un body sin `question`?**
 `/predict` devuelve `400 {"error":"bad_request","detail":"field 'question' is required"}`.
@@ -143,11 +145,14 @@ Porque el modelo se carga en un hilo aparte; el contrato dice que `ok` solo cuan
 **¿Qué hace el `Lock`?**
 Evita que dos inferencias compitan por los núcleos de la CPU al mismo tiempo; el harness manda las preguntas una a una, así que no perdemos nada.
 
-**¿Por qué DistilBERT y no DeBERTa?**
-DeBERTa-v3-base es más preciso pero ~3 veces más lento en CPU y más pesado; con 5 s por petición, túnel incluido, y 150 s para 50 preguntas, DistilBERT da margen de sobra. Además, la nota máxima se alcanza al igualar la referencia, que es DistilBERT.
+**¿Por qué RoBERTa y no DistilBERT?**
+Entrenamos los dos con los mismos hiperparámetros. En las mismas 2000 preguntas de validación RoBERTa sacó F1 83.7 y DistilBERT 68.3. La referencia del profe es un DistilBERT (0.70), así que RoBERTa nos da margen por si el examen (textos que no son de SQuAD) es más difícil. Es ~2× más lento, pero en CPU el peor caso (5000 caracteres, 6 ventanas) tarda ~2 s y en la GPU de la laptop ~0.2 s, dentro del límite de 5 s con túnel.
+
+**¿Por qué no DeBERTa-v3?**
+Es aún más preciso pero ~1.5–2× más lento que RoBERTa en CPU y más pesado de entrenar; con RoBERTa ya pasamos la referencia con margen.
 
 **¿Cuántos parámetros tiene el modelo y de dónde sale el número de `/info`?**
-`sum(p.numel() for p in model.parameters())` en `QAEngine.__init__` (≈66 M para DistilBERT).
+`sum(p.numel() for p in model.parameters())` en `QAEngine.__init__` (124,056,578 para nuestro RoBERTa-base con la cabeza de QA).
 
 **¿Qué mide `scripts/check_service.py`?**
 Las 5 pruebas del enunciado, dos casos de error extra, la muestra pública con la regla `context[start:...] == answer`, EM/F1 y la latencia.

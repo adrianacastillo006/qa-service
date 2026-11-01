@@ -59,6 +59,8 @@ pytest -q        # deben salir 22 passed
 
 **1.4 Elegir el modelo.** Recomendación: **`distilbert-base-uncased`** (66 M parámetros). Razón concreta: el modelo de referencia del profesor es DistilBERT, así que igualarlo ya da los 60 puntos completos, y es el más rápido en CPU (hay límite de 5 s por pregunta y 150 s para las 50). `roberta-base` es mejor en calidad pero ~2× más lento; solo úsenlo si tienen tiempo de sobra y miden que cabe en el tiempo.
 
+> **Lo que hicimos:** entrenamos los dos en una RTX 4080 Laptop (35 y 62 min). RoBERTa sacó F1 83.7 vs 68.3 de DistilBERT en validación y su peor caso en CPU (~2 s) cabe en los 5 s, así que **servimos `roberta-base`**. Los logs de ambos están en `logs/<modelo>/`.
+
 > ⚠️ Prohibido usar checkpoints ya entrenados en SQuAD (por ejemplo `distilbert-base-cased-distilled-squad`). Debe ser el modelo **base**.
 
 ---
@@ -82,7 +84,7 @@ python train.py --train_samples 2000 --val_samples 300 --epochs 1
 **2.3 Entrenamiento real:**
 
 ```bash
-python train.py --base_model distilbert-base-uncased --epochs 2 --batch_size 16 --lr 3e-5
+python train.py --base_model roberta-base --epochs 2 --batch_size 16 --lr 3e-5 --logs_dir logs/roberta-base
 ```
 
 Con GPU tipo T4 tarda aproximadamente 1–2 horas con el set completo (~130 k preguntas). Si no les alcanza el tiempo, usen `--train_samples 60000`.
@@ -101,9 +103,9 @@ from google.colab import files; files.download("model.zip")
 **2.4 Qué produce el entrenamiento:**
 
 - `model/` → pesos + tokenizer + `qa_meta.json` (con el umbral elegido). **No va a git.**
-- `logs/loss.png` → curva de pérdida (entrenamiento y validación). **Sí va a git.**
-- `logs/train_log.json` → historial completo. **Sí va a git.**
-- `logs/threshold.json` → EM/F1 de validación y el barrido del umbral. **Sí va a git.**
+- `logs/<modelo>/loss.png` → curva de pérdida (entrenamiento y validación). **Sí va a git.**
+- `logs/<modelo>/train_log.json` → historial completo. **Sí va a git.**
+- `logs/<modelo>/threshold.json` → EM/F1 de validación y el barrido del umbral, ponderado a 25 % sin respuesta (`--target_unanswerable`). **Sí va a git.**
 
 **2.5 Subir los logs y compartir los pesos:**
 
@@ -214,7 +216,7 @@ Envíen al profesor la URL del repositorio y la URL del túnel. Si el repo es pr
 
 1. Antes de su turno: pongan el **nuevo token** del profesor en `.env`, reinicien el servidor, verifiquen con `check_service.py`, y envíen la URL del túnel.
 2. **Pitch de 3 minutos**, cubriendo los 4 criterios evaluados:
-   - **Modelo:** por qué DistilBERT (trade-off calidad / velocidad en CPU / tiempo límite).
+   - **Modelo:** por qué RoBERTa-base y no DistilBERT (medimos ambos: +15 F1, y aun así cabe en 5 s en CPU).
    - **Entrenamiento:** datos, hiperparámetros, umbral de null, mostrar `logs/loss.png` y EM/F1.
    - **Arquitectura del servicio:** FastAPI → token → validación → ventanas → modelo → span → JSON.
    - **Decoder:** problemas concretos que tuvieron y cómo un modelo GPT lo resolvería (y a qué costo).
@@ -243,6 +245,8 @@ Todos deben leer todo el código: la pregunta del Q&A es al azar.
 | `/health` siempre 503 | El modelo no cargó | Revisar el log del servidor; ¿existe `model/` con `config.json`? |
 | 401 con el token correcto | Token con espacios o comillas extra en `.env` | `QA_API_TOKEN=abc123` sin comillas ni espacios |
 | `curl` falla en Windows | `curl` es alias de PowerShell | Usar `curl.exe` |
-| Respuestas muy lentas | CPU ocupada o modelo grande | Cerrar programas; usar DistilBERT |
+| Respuestas muy lentas | CPU ocupada o modelo grande | Cerrar programas; servir en GPU si hay; en último caso usar el modelo DistilBERT |
+| `curl` a `localhost` tarda ~2 s más en Windows | `localhost` prueba IPv6 primero | Usar `127.0.0.1` |
+| `ImportError: DLL load failed ... Application Control policy` al entrenar | Smart App Control de Windows bloquea DLLs de pandas 3 | `pip install "pandas<3"` (ya está en `requirements-train.txt`) |
 | Casi todo da `null` | Umbral demasiado estricto | Revisar `logs/threshold.json`; probar `QA_NULL_THRESHOLD` |
 | `CUDA out of memory` al entrenar | Batch muy grande | `--batch_size 8` |
