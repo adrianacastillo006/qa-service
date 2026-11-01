@@ -30,6 +30,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 
 MODEL_DIR = os.environ.get("MODEL_DIR", "model")
 TEAM_NAME = os.environ.get("TEAM_NAME", "team-XX")
+QA_DEVICE = os.environ.get("QA_DEVICE") or None   # "cpu" / "cuda"; default: cuda if available
 
 # --------------------------------------------------------------------- state
 state = {"engine": None, "load_error": None}
@@ -41,11 +42,11 @@ def load_engine() -> None:
     try:
         from qa_engine import QAEngine
         t0 = time.time()
-        engine = QAEngine(MODEL_DIR)
+        engine = QAEngine(MODEL_DIR, device=QA_DEVICE)
         engine.predict("Warm-up?", "Warm-up context.")   # first call is slower; do it now
         state["engine"] = engine
-        log.info("Model loaded from %s in %.1fs (%d params, threshold=%.3f)",
-                 MODEL_DIR, time.time() - t0, engine.n_params, engine.threshold)
+        log.info("Model loaded from %s on %s in %.1fs (%d params, threshold=%.3f)",
+                 MODEL_DIR, engine.device, time.time() - t0, engine.n_params, engine.threshold)
     except Exception as exc:  # keep the server alive; /health stays 503
         state["load_error"] = repr(exc)
         log.exception("Model failed to load")
