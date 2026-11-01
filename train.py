@@ -36,6 +36,7 @@ def parse_args():
     p.add_argument("--base_model", default="distilbert-base-uncased",
                    help="BASE checkpoint (never one already fine-tuned on SQuAD)")
     p.add_argument("--output_dir", default="model")
+    p.add_argument("--logs_dir", default="logs", help="where loss curve and threshold results go")
     p.add_argument("--train_samples", type=int, default=0, help="0 = full train set (~130k)")
     p.add_argument("--val_samples", type=int, default=2000, help="examples used for threshold tuning")
     p.add_argument("--epochs", type=float, default=2)
@@ -45,6 +46,11 @@ def parse_args():
     p.add_argument("--doc_stride", type=int, default=128)
     p.add_argument("--warmup_ratio", type=float, default=0.1)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--target_unanswerable", type=float, default=0.25,
+                   help="share of unanswerable questions assumed when tuning the threshold "
+                        "(hidden test set ~0.25; SQuAD dev is ~0.5). 0 = no reweighting")
+    p.add_argument("--tune_only", action="store_true",
+                   help="skip training: re-tune the threshold of the model in --output_dir")
     return p.parse_args()
 
 
@@ -87,9 +93,12 @@ def make_train_features(tokenizer, max_len, stride):
 
 
 # ------------------------------------------------------- threshold tuning
-def tune_threshold(engine: QAEngine, val_examples) -> dict:
+def tune_threshold(engine: QAEngine, val_examples, target_unanswerable: float = 0.0) -> dict:
     """For every validation example compute diff = null_score - best_span_score once,
-    then sweep the threshold: predict null iff diff > threshold. Keep the best F1."""
+    then sweep the threshold: predict null iff diff > threshold. Keep the best F1.
+    With target_unanswerable > 0 the examples are weighted so that unanswerable questions
+    count as that share of the set: SQuAD dev is ~50 % unanswerable, the hidden test set ~25 %,
+    and a threshold tuned on 50 % would answer null too often."""
     rows = []
     for ex in val_examples:
         rs = engine.raw_scores(ex["question"], ex["context"])
@@ -99,12 +108,20 @@ def tune_threshold(engine: QAEngine, val_examples) -> dict:
         em_null, f1_null = item_scores(None, golds)          # if we abstain
         rows.append((diff, em_ans, f1_ans, em_null, f1_null, bool(golds)))
 
+    n_no = sum(not r[5] for r in rows)
+    if target_unanswerable and 0 < n_no < len(rows):
+        weights = [target_unanswerable / n_no if not r[5] else (1 - target_unanswerable) / (len(rows) - n_no)
+                   for r in rows]
+    else:
+        weights = [1.0] * len(rows)
+    avg = lambda values: float(np.average(values, weights=weights))
+
     diffs = sorted({r[0] for r in rows})
     candidates = [-1e9] + [d + 1e-6 for d in diffs]  # thresholds between observed values
     best = None
     for t in candidates:
-        em = np.mean([r[3] if r[0] > t else r[1] for r in rows])
-        f1 = np.mean([r[4] if r[0] > t else r[2] for r in rows])
+        em = avg([r[3] if r[0] > t else r[1] for r in rows])
+        f1 = avg([r[4] if r[0] > t else r[2] for r in rows])
         if best is None or f1 > best["f1"]:
             best = {"threshold": float(t), "em": float(em), "f1": float(f1)}
 
@@ -114,14 +131,15 @@ def tune_threshold(engine: QAEngine, val_examples) -> dict:
         pick = lambda r, i_null, i_ans: r[i_null] if r[0] > t else r[i_ans]
         return {
             "threshold": t,
-            "em_all": float(np.mean([pick(r, 3, 1) for r in rows])),
-            "f1_all": float(np.mean([pick(r, 4, 2) for r in rows])),
+            "em_all": avg([pick(r, 3, 1) for r in rows]),     # weighted if target_unanswerable
+            "f1_all": avg([pick(r, 4, 2) for r in rows]),
             "em_answerable": float(np.mean([pick(r, 3, 1) for r in has])) if has else None,
             "f1_answerable": float(np.mean([pick(r, 4, 2) for r in has])) if has else None,
             "acc_unanswerable": float(np.mean([pick(r, 3, 1) for r in no])) if no else None,
         }
 
-    return {"n_examples": len(rows), "best": report(best["threshold"]), "zero_threshold": report(0.0),
+    return {"n_examples": len(rows), "n_unanswerable": n_no, "target_unanswerable": target_unanswerable,
+            "best": report(best["threshold"]), "zero_threshold": report(0.0),
             "sweep": [report(t) for t in np.linspace(-6, 6, 25).tolist()]}
 
 
@@ -142,18 +160,43 @@ def plot_loss(history, out_png):
 
 
 # -------------------------------------------------------------------- main
+def threshold_split(val_raw, args):
+    """Same shuffled dev questions for threshold tuning in training and in --tune_only."""
+    val_raw = val_raw.shuffle(seed=args.seed)
+    return val_raw.select(range(min(args.val_samples, len(val_raw)))), val_raw
+
+
+def retune(args, logs):
+    """Re-tune the threshold of an already trained model (no training)."""
+    out = Path(args.output_dir)
+    meta = json.loads((out / "qa_meta.json").read_text())
+    val_for_threshold, _ = threshold_split(load_dataset("rajpurkar/squad_v2")["validation"], args)
+    result = tune_threshold(QAEngine(out, threshold=0.0), val_for_threshold, args.target_unanswerable)
+    meta["null_threshold"] = result["best"]["threshold"]
+    (out / "qa_meta.json").write_text(json.dumps(meta, indent=1))
+    old = logs / "threshold.json"
+    if old.exists():   # keep the training block written by the full run
+        result["training"] = json.loads(old.read_text()).get("training")
+    old.write_text(json.dumps(result, indent=1))
+    print(json.dumps(result["best"], indent=1))
+    print(f"Updated {out}/qa_meta.json (threshold={meta['null_threshold']:.3f})")
+
+
 def main():
     args = parse_args()
     set_seed(args.seed)
-    Path("logs").mkdir(exist_ok=True)
+    logs = Path(args.logs_dir)
+    logs.mkdir(parents=True, exist_ok=True)
     t_start = time.time()
+
+    if args.tune_only:
+        return retune(args, logs)
 
     raw = load_dataset("rajpurkar/squad_v2")
     train_raw, val_raw = raw["train"], raw["validation"]
     if args.train_samples:
         train_raw = train_raw.shuffle(seed=args.seed).select(range(args.train_samples))
-    val_raw = val_raw.shuffle(seed=args.seed)
-    val_for_threshold = val_raw.select(range(min(args.val_samples, len(val_raw))))
+    val_for_threshold, val_raw = threshold_split(val_raw, args)
     val_for_loss = val_raw.select(range(len(val_for_threshold), min(len(val_for_threshold) + 1000, len(val_raw))))
 
     tokenizer = AutoTokenizer.from_pretrained(args.base_model)
@@ -189,15 +232,15 @@ def main():
     trainer.save_model(out)
     tokenizer.save_pretrained(out)
     history = trainer.state.log_history
-    Path("logs/train_log.json").write_text(json.dumps(history, indent=1))
-    plot_loss(history, "logs/loss.png")
+    (logs / "train_log.json").write_text(json.dumps(history, indent=1))
+    plot_loss(history, logs / "loss.png")
 
     # Threshold tuning with the SAME engine the API uses
     meta = {"base_model": args.base_model, "max_seq_length": args.max_seq_length,
             "doc_stride": args.doc_stride, "null_threshold": 0.0}
     (out / "qa_meta.json").write_text(json.dumps(meta, indent=1))
     engine = QAEngine(out)
-    result = tune_threshold(engine, val_for_threshold)
+    result = tune_threshold(engine, val_for_threshold, args.target_unanswerable)
     meta["null_threshold"] = result["best"]["threshold"]
     (out / "qa_meta.json").write_text(json.dumps(meta, indent=1))
 
@@ -205,7 +248,7 @@ def main():
     result["training"]["train_features"] = len(train_ds)
     result["training"]["minutes"] = round((time.time() - t_start) / 60, 1)
     result["training"]["device"] = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "cpu"
-    Path("logs/threshold.json").write_text(json.dumps(result, indent=1))
+    (logs / "threshold.json").write_text(json.dumps(result, indent=1))
     print(json.dumps(result["best"], indent=1))
     print(f"Saved model to {out}/ (threshold={meta['null_threshold']:.3f})")
 
