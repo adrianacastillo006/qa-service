@@ -1,4 +1,5 @@
 -r requirements.txt
 datasets>=2.19
+pandas<3   # pandas 3.x DLLs are blocked by Windows Smart App Control on our training laptop
 accelerate>=0.30
 matplotlib
