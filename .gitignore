@@ -4,6 +4,7 @@
 # Model weights stay out of git (share them via a GitHub Release or a shared folder)
 model/
 model_*/
+model.zip
 checkpoints/
 *.safetensors
 *.bin
