@@ -1,0 +1,238 @@
+{
+ "n_examples": 2000,
+ "best": {
+  "threshold": -2.085683299468994,
+  "em_all": 0.808,
+  "f1_all": 0.8367502873946766,
+  "em_answerable": 0.7548518896833504,
+  "f1_answerable": 0.8135858782322303,
+  "acc_unanswerable": 0.8589618021547503
+ },
+ "zero_threshold": {
+  "threshold": 0.0,
+  "em_all": 0.7955,
+  "f1_all": 0.8261594865288758,
+  "em_answerable": 0.7793667007150153,
+  "f1_answerable": 0.8420009939302877,
+  "acc_unanswerable": 0.8109696376101861
+ },
+ "sweep": [
+  {
+   "threshold": -6.0,
+   "em_all": 0.7845,
+   "f1_all": 0.8030762452299449,
+   "em_answerable": 0.6424923391215526,
+   "f1_answerable": 0.6804417675790498,
+   "acc_unanswerable": 0.920666013712047
+  },
+  {
+   "threshold": -5.5,
+   "em_all": 0.787,
+   "f1_all": 0.8067115987652985,
+   "em_answerable": 0.6598569969356486,
+   "f1_answerable": 0.7001258401742564,
+   "acc_unanswerable": 0.9089128305582762
+  },
+  {
+   "threshold": -5.0,
+   "em_all": 0.793,
+   "f1_all": 0.8134639797176795,
+   "em_answerable": 0.6792645556690501,
+   "f1_answerable": 0.7210704386469446,
+   "acc_unanswerable": 0.9020568070519099
+  },
+  {
+   "threshold": -4.5,
+   "em_all": 0.798,
+   "f1_all": 0.820349535273235,
+   "em_answerable": 0.6976506639427987,
+   "f1_answerable": 0.7433085500985394,
+   "acc_unanswerable": 0.8942213516160626
+  },
+  {
+   "threshold": -4.0,
+   "em_all": 0.8,
+   "f1_all": 0.8248493021730019,
+   "em_answerable": 0.7099080694586313,
+   "f1_answerable": 0.7606727317119548,
+   "acc_unanswerable": 0.8863858961802155
+  },
+  {
+   "threshold": -3.5,
+   "em_all": 0.805,
+   "f1_all": 0.8305217159661054,
+   "em_answerable": 0.7252298263534218,
+   "f1_answerable": 0.7773681633628301,
+   "acc_unanswerable": 0.881488736532811
+  },
+  {
+   "threshold": -3.0,
+   "em_all": 0.803,
+   "f1_all": 0.8298669540613435,
+   "em_answerable": 0.7323799795709908,
+   "f1_answerable": 0.7872665047218456,
+   "acc_unanswerable": 0.8707149853085211
+  },
+  {
+   "threshold": -2.5,
+   "em_all": 0.806,
+   "f1_all": 0.8336169540613434,
+   "em_answerable": 0.7446373850868233,
+   "f1_answerable": 0.801056085927157,
+   "acc_unanswerable": 0.8648383937316356
+  },
+  {
+   "threshold": -2.0,
+   "em_all": 0.807,
+   "f1_all": 0.8357502873946767,
+   "em_answerable": 0.7548518896833504,
+   "f1_answerable": 0.8135858782322303,
+   "acc_unanswerable": 0.8570029382957884
+  },
+  {
+   "threshold": -1.5,
+   "em_all": 0.803,
+   "f1_all": 0.832036001680391,
+   "em_answerable": 0.7599591419816139,
+   "f1_answerable": 0.8192768165074382,
+   "acc_unanswerable": 0.8442703232125367
+  },
+  {
+   "threshold": -1.0,
+   "em_all": 0.8025,
+   "f1_all": 0.8324776683470577,
+   "em_answerable": 0.7701736465781409,
+   "f1_answerable": 0.8314150528029779,
+   "acc_unanswerable": 0.8334965719882468
+  },
+  {
+   "threshold": -0.5,
+   "em_all": 0.7985,
+   "f1_all": 0.8289928198622092,
+   "em_answerable": 0.7742594484167518,
+   "f1_answerable": 0.8365532581454733,
+   "acc_unanswerable": 0.821743388834476
+  },
+  {
+   "threshold": 0.0,
+   "em_all": 0.7955,
+   "f1_all": 0.8261594865288758,
+   "em_answerable": 0.7793667007150153,
+   "f1_answerable": 0.8420009939302877,
+   "acc_unanswerable": 0.8109696376101861
+  },
+  {
+   "threshold": 0.5,
+   "em_all": 0.795,
+   "f1_all": 0.8259607287649008,
+   "em_answerable": 0.7834525025536262,
+   "f1_answerable": 0.8467022038098073,
+   "acc_unanswerable": 0.8060724779627816
+  },
+  {
+   "threshold": 1.0,
+   "em_all": 0.792,
+   "f1_all": 0.8236450444492164,
+   "em_answerable": 0.7916241062308478,
+   "f1_answerable": 0.8562717966276125,
+   "acc_unanswerable": 0.7923604309500489
+  },
+  {
+   "threshold": 1.5,
+   "em_all": 0.787,
+   "f1_all": 0.8190215150374518,
+   "em_answerable": 0.7987742594484167,
+   "f1_answerable": 0.8641910419559788,
+   "acc_unanswerable": 0.7757100881488737
+  },
+  {
+   "threshold": 2.0,
+   "em_all": 0.782,
+   "f1_all": 0.8140215150374518,
+   "em_answerable": 0.8018386108273748,
+   "f1_answerable": 0.867255393334937,
+   "acc_unanswerable": 0.7629774730656219
+  },
+  {
+   "threshold": 2.5,
+   "em_all": 0.7735,
+   "f1_all": 0.8055215150374517,
+   "em_answerable": 0.8038815117466803,
+   "f1_answerable": 0.8692982942542424,
+   "acc_unanswerable": 0.7443682664054848
+  },
+  {
+   "threshold": 3.0,
+   "em_all": 0.7695,
+   "f1_all": 0.8017715150374518,
+   "em_answerable": 0.8069458631256384,
+   "f1_answerable": 0.8728733708630269,
+   "acc_unanswerable": 0.7335945151811949
+  },
+  {
+   "threshold": 3.5,
+   "em_all": 0.764,
+   "f1_all": 0.7962715150374517,
+   "em_answerable": 0.8110316649642493,
+   "f1_answerable": 0.8769591727016377,
+   "acc_unanswerable": 0.7189030362389814
+  },
+  {
+   "threshold": 4.0,
+   "em_all": 0.759,
+   "f1_all": 0.7912715150374517,
+   "em_answerable": 0.81511746680286,
+   "f1_answerable": 0.8810449745402485,
+   "acc_unanswerable": 0.7051909892262488
+  },
+  {
+   "threshold": 4.5,
+   "em_all": 0.7525,
+   "f1_all": 0.7847715150374518,
+   "em_answerable": 0.8161389172625128,
+   "f1_answerable": 0.8820664249999012,
+   "acc_unanswerable": 0.6914789422135161
+  },
+  {
+   "threshold": 5.0,
+   "em_all": 0.7455,
+   "f1_all": 0.7779715150374517,
+   "em_answerable": 0.8181818181818182,
+   "f1_answerable": 0.8845179061030678,
+   "acc_unanswerable": 0.6758080313418218
+  },
+  {
+   "threshold": 5.5,
+   "em_all": 0.74,
+   "f1_all": 0.7724715150374517,
+   "em_answerable": 0.8181818181818182,
+   "f1_answerable": 0.8845179061030678,
+   "acc_unanswerable": 0.6650342801175319
+  },
+  {
+   "threshold": 6.0,
+   "em_all": 0.7305,
+   "f1_all": 0.7629715150374516,
+   "em_answerable": 0.8212461695607763,
+   "f1_answerable": 0.8875822574820259,
+   "acc_unanswerable": 0.643486777668952
+  }
+ ],
+ "training": {
+  "base_model": "roberta-base",
+  "output_dir": "model_roberta",
+  "logs_dir": "logs/roberta-base",
+  "train_samples": 0,
+  "val_samples": 2000,
+  "epochs": 2.0,
+  "lr": 3e-05,
+  "batch_size": 16,
+  "max_seq_length": 384,
+  "doc_stride": 128,
+  "warmup_ratio": 0.1,
+  "seed": 42,
+  "train_features": 131821,
+  "minutes": 62.2,
+  "device": "NVIDIA GeForce RTX 4080 Laptop GPU"
+ }
+}
