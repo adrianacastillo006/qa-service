@@ -34,6 +34,14 @@ Public URL: `https://hippo-neat-yearly.ngrok-free.app`, the static ngrok dev dom
 account whose authtoken is configured on the serving laptop. On another ngrok account, set
 `NGROK_DOMAIN` to that account's domain or leave it empty to get a random URL.
 
+To try the running service by hand (token read from `.env`):
+
+```bash
+python scripts/ask.py          # terminal: paste a paragraph, then ask questions
+python scripts/demo_web.py     # browser demo at http://127.0.0.1:8080, with a live feed of
+                               # the /predict calls coming through the tunnel (no headers shown)
+```
+
 On Windows use `127.0.0.1` rather than `localhost` for local checks: `localhost`
 tries IPv6 first and adds ~2 s to every request.
 

@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QA Service Demo</title>
+<style>
+  :root {
+    --bg: #0f1420; --panel: #171e2d; --line: #2a3448; --text: #e7ecf5; --muted: #8b97ad;
+    --accent: #4f8cff; --ok: #3ccf91; --null: #f2b84b; --err: #ff6b6b; --hl: rgba(60, 207, 145, .25);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  h1 { font-size: 22px; margin: 0; }
+  h1 span { color: var(--muted); font-weight: 400; }
+  .pill { font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .pill.ok { color: var(--ok); border-color: var(--ok); }
+  .pill.err { color: var(--err); border-color: var(--err); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  textarea, input, select { width: 100%; min-width: 0; background: var(--bg); color: var(--text); border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px 12px; font: inherit; }
+  textarea { min-height: 120px; resize: vertical; }
+  textarea:focus, input:focus, select:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  .row { display: flex; gap: 10px; margin-top: 12px; }
+  .row input { flex: 1; min-width: 0; }
+  button { background: var(--accent); color: white; border: 0; border-radius: 8px; padding: 10px 18px; font: inherit;
+    font-weight: 600; cursor: pointer; white-space: nowrap; }
+  button:disabled { opacity: .5; cursor: wait; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { background: transparent; border: 1px solid var(--line); color: var(--muted); padding: 4px 10px; font-weight: 400; font-size: 13px; }
+  .chip:hover { color: var(--text); border-color: var(--accent); }
+  .answer { font-size: 26px; font-weight: 700; margin: 4px 0 8px; }
+  .answer.ok { color: var(--ok); }
+  .answer.null { color: var(--null); }
+  .answer.err { color: var(--err); font-size: 18px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 16px; color: var(--muted); font-size: 13px; }
+  .meta b { color: var(--text); font-weight: 600; }
+  .context { margin-top: 12px; color: var(--muted); white-space: pre-wrap; }
+  .context mark { background: var(--hl); color: var(--text); border-radius: 4px; padding: 0 2px; }
+  details { margin-top: 12px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; overflow-x: auto; font-size: 13px; }
+  .hist { list-style: none; margin: 0; padding: 0; }
+  .hist li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .hist li:first-child { border-top: 0; }
+  .hist .q { color: var(--muted); }
+  .hist .a { font-weight: 600; text-align: right; }
+  .empty { color: var(--muted); font-size: 14px; }
+  .live-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .live-head h2 { font-size: 16px; margin: 0; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); margin-right: 6px;
+    animation: pulse 1.6s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  .stats { display: flex; flex-wrap: wrap; gap: 16px; color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+  .stats b { color: var(--text); font-size: 18px; margin-right: 4px; }
+  .toggle { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; margin: 0; }
+  .toggle input { width: auto; }
+  .live { max-height: 420px; overflow-y: auto; }
+  .live .item { border-top: 1px solid var(--line); padding: 8px 0; cursor: pointer; }
+  .live .item:first-child { border-top: 0; }
+  .live .line { display: grid; grid-template-columns: 70px 1fr minmax(90px, 30%) 64px; gap: 10px; font-size: 14px; align-items: baseline; }
+  .live .t, .live .ms { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .live .ms { text-align: right; }
+  .live .a { font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+  .live .a.ok { color: var(--ok); } .live .a.null { color: var(--null); } .live .a.err { color: var(--err); }
+  .tag { font-size: 11px; border: 1px solid var(--line); border-radius: 999px; padding: 0 6px; color: var(--muted); margin-left: 6px; }
+  .live .context { display: none; font-size: 13px; }
+  .live .item.open .context { display: block; }
+  @media (max-width: 600px) {
+    .row { flex-direction: column; } .answer { font-size: 22px; }
+    .live .line { grid-template-columns: 1fr auto; } .live .t, .live .ms { display: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>QA extractivo <span>· RoBERTa + SQuAD 2.0</span></h1>
+    <span id="status" class="pill">Conectando…</span>
+  </header>
+
+  <section class="panel">
+    <label for="example">Párrafo de ejemplo</label>
+    <select id="example"></select>
+    <label for="context" style="margin-top:12px">Párrafo (en inglés, hasta 5000 caracteres)</label>
+    <textarea id="context" maxlength="5000"></textarea>
+    <div class="row">
+      <input id="question" maxlength="500" placeholder="Escribe una pregunta en inglés y presiona Enter">
+      <button id="ask">Preguntar</button>
+    </div>
+    <div id="suggest" class="chips"></div>
+  </section>
+
+  <section class="panel" id="result">
+    <div class="empty">La respuesta aparece aquí. Si no está en el párrafo, el modelo responde <b>null</b>.</div>
+  </section>
+
+  <section class="panel">
+    <div class="live-head">
+      <h2><span class="dot"></span>En vivo: preguntas que llegan por el túnel</h2>
+      <label class="toggle"><input type="checkbox" id="onlyTheirs"> Ocultar las nuestras</label>
+    </div>
+    <div id="stats" class="stats"></div>
+    <div id="live" class="live"><div class="empty">Esperando preguntas…</div></div>
+  </section>
+
+  <section class="panel">
+    <label>Historial</label>
+    <ul id="history" class="hist"><li class="empty">Todavía no hay preguntas.</li></ul>
+  </section>
+</main>
+
+<script>
+const EXAMPLES = [
+  { name: "Nuestro proyecto",
+    text: "Our team fine-tuned RoBERTa-base on the SQuAD 2.0 dataset for two epochs. Training took 62 minutes on an NVIDIA RTX 4080 laptop GPU. The model has 124 million parameters and splits long paragraphs into windows of 384 tokens with an overlap of 128 tokens. The service is built with FastAPI and is exposed to the internet through an ngrok tunnel.",
+    qs: ["How long did training take?", "Which framework is the service built with?", "How much did the GPU cost?"] },
+  { name: "Café Tunco (inventado)",
+    text: "Café Tunco is a small coffee shop in La Libertad, El Salvador. It was opened in 2019 by Ana Rivas, a former surf instructor. The café has twelve tables and is closed on Mondays. Its most popular item is a cup of local coffee served with sweet bread, and a plate of pupusas costs $1.25.",
+    qs: ["Who opened Café Tunco?", "When is the café closed?", "How much does a plate of pupusas cost?", "How many employees work there?"] },
+  { name: "Fotosíntesis",
+    text: "Photosynthesis is the process plants use to turn light into chemical energy. It takes place mainly in the leaves, inside small structures called chloroplasts. These contain a green pigment called chlorophyll, which absorbs sunlight. Using that energy, the plant combines water and carbon dioxide to produce glucose, and releases oxygen as a by-product.",
+    qs: ["What pigment absorbs sunlight?", "What gas is released?", "How long does photosynthesis take?"] },
+  { name: "Partido de fútbol (con trampas)",
+    text: "The final ended 2-1 in front of 18,500 fans. Carlos Mendez scored the first goal in the 34th minute, but the visitors equalized shortly after half-time. The winning goal came in stoppage time from Luis Ortega, who had entered the game as a substitute. The referee showed three yellow cards but no red card, and the coach later said it was the best match of his career.",
+    qs: ["Who scored the winning goal?", "How many fans attended?", "Who scored the visitors' goal?", "What is the coach's name?"] },
+  { name: "Escribir mi propio párrafo", text: "", qs: [] },
+];
+
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let n = 0, history = [];
+
+EXAMPLES.forEach((e, i) => $("example").add(new Option(e.name, i)));
+function loadExample(i) {
+  const e = EXAMPLES[i];
+  $("context").value = e.text;
+  $("suggest").innerHTML = "";
+  e.qs.forEach(q => {
+    const b = document.createElement("button");
+    b.className = "chip"; b.textContent = q;
+    b.onclick = () => { $("question").value = q; ask(); };
+    $("suggest").appendChild(b);
+  });
+  if (!e.text) $("context").focus();
+}
+$("example").onchange = e => loadExample(e.target.value);
+loadExample(0);
+
+async function status() {
+  try {
+    const r = await (await fetch("/api/info")).json();
+    if (r.error) throw new Error(r.error);
+    const ok = r.health.status === "ok";
+    $("status").className = "pill " + (ok ? "ok" : "err");
+    $("status").textContent = ok ? `En línea · ${r.info.model} · ${new URL(r.url).host}` : "Cargando el modelo…";
+  } catch (e) {
+    $("status").className = "pill err";
+    $("status").textContent = "Sin conexión con el servicio";
+  }
+}
+status(); setInterval(status, 15000);
+
+async function ask() {
+  const context = $("context").value.trim(), question = $("question").value.trim();
+  if (!context || !question) return;
+  $("ask").disabled = true;
+  try {
+    const r = await (await fetch("/api/predict", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: `demo-${++n}`, context, question }) })).json();
+    show(context, question, r);
+  } catch (e) {
+    show(context, question, { error: String(e) });
+  } finally {
+    $("ask").disabled = false;
+    $("question").select();
+  }
+}
+$("ask").onclick = ask;
+$("question").onkeydown = e => { if (e.key === "Enter") ask(); };
+
+function show(context, question, r) {
+  const res = r.response || {};
+  let html, label;
+  if (r.error || r.status !== 200) {
+    label = `Error ${r.status || ""}`;
+    html = `<div class="answer err">${esc(label)}: ${esc(JSON.stringify(res.error ? res : r.error || res))}</div>`;
+  } else if (res.answer === null) {
+    label = "null";
+    html = `<div class="answer null">null — no está en el párrafo</div>`;
+  } else {
+    label = res.answer;
+    const s = res.start, e = s + res.answer.length;
+    html = `<div class="answer ok">${esc(res.answer)}</div>
+      <div class="context">${esc(context.slice(0, s))}<mark>${esc(context.slice(s, e))}</mark>${esc(context.slice(e))}</div>`;
+  }
+  const meta = r.status === 200
+    ? `<div class="meta"><span>Pregunta: <b>${esc(question)}</b></span><span>start: <b>${res.start ?? "null"}</b></span>
+       <span>score: <b>${res.score?.toFixed(2)}</b></span><span>tiempo: <b>${r.ms} ms</b></span></div>` : "";
+  $("result").innerHTML = meta + html +
+    `<details><summary>Ver la respuesta JSON de la API</summary><pre>${esc(JSON.stringify(res, null, 2))}</pre></details>`;
+  liveTick();
+  history.unshift({ question, label });
+  $("history").innerHTML = history.slice(0, 10)
+    .map(h => `<li><span class="q">${esc(h.question)}</span><span class="a">${esc(h.label)}</span></li>`).join("");
+}
+
+// Live feed: /predict calls seen by ngrok (instructor's harness included). Bodies only, never headers.
+const opened = new Set();
+let liveItems = [];
+function highlight(ctx, s, a) {
+  if (!ctx) return "";
+  if (s === null || s === undefined || a === null) return esc(ctx);
+  return esc(ctx.slice(0, s)) + "<mark>" + esc(ctx.slice(s, s + a.length)) + "</mark>" + esc(ctx.slice(s + a.length));
+}
+function renderLive() {
+  const shown = $("onlyTheirs").checked ? liveItems.filter(x => !x.ours) : liveItems;
+  const theirs = liveItems.filter(x => !x.ours);
+  const nulls = theirs.filter(x => x.status === 200 && x.answer === null).length;
+  const avg = theirs.length ? Math.round(theirs.reduce((t, x) => t + x.ms, 0) / theirs.length) : 0;
+  $("stats").innerHTML = `<span><b>${theirs.length}</b>externas</span><span><b>${nulls}</b>null</span>
+    <span><b>${avg}</b>ms promedio</span><span><b>${liveItems.length - theirs.length}</b>nuestras</span>`;
+  if (!shown.length) { $("live").innerHTML = '<div class="empty">Esperando preguntas…</div>'; return; }
+  $("live").innerHTML = shown.map(x => {
+    const key = x.time + x.id;
+    const cls = x.status !== 200 ? "err" : x.answer === null ? "null" : "ok";
+    const ans = x.status !== 200 ? `HTTP ${x.status}` : x.answer === null ? "null" : x.answer;
+    const t = new Date(x.time).toLocaleTimeString();
+    return `<div class="item${opened.has(key) ? " open" : ""}" data-key="${esc(key)}">
+      <div class="line"><span class="t">${t}</span>
+        <span>${esc(x.question || "(sin pregunta)")}<span class="tag">${x.ours ? "nuestra" : esc(x.id)}</span></span>
+        <span class="a ${cls}">${esc(String(ans))}</span><span class="ms">${x.ms} ms</span></div>
+      <div class="context">${highlight(x.context, x.start, x.answer)}</div></div>`;
+  }).join("");
+}
+$("live").onclick = e => {
+  const item = e.target.closest(".item");
+  if (!item) return;
+  const key = item.dataset.key;
+  opened.has(key) ? opened.delete(key) : opened.add(key);
+  item.classList.toggle("open");
+};
+$("onlyTheirs").onchange = renderLive;
+async function liveTick() {
+  try {
+    const r = await (await fetch("/api/live")).json();
+    if (r.error) throw new Error(r.error);
+    liveItems = r.items;
+    renderLive();
+  } catch (e) {
+    $("stats").textContent = "No se puede leer el panel de ngrok (¿está corriendo el túnel?)";
+  }
+}
+liveTick(); setInterval(liveTick, 2000);
+</script>
+</body>
+</html>
