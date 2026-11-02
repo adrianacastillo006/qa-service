@@ -111,7 +111,7 @@ Detalle importante: el umbral se calcula **con el mismo código que usa la API**
 
 ## 8. El túnel
 
-El servicio corre en la laptop: usa la GPU si existe y si no la CPU (se puede forzar con `QA_DEVICE=cpu`). `ngrok http 8000` crea una URL pública HTTPS que reenvía las peticiones a `localhost:8000`. Como esa URL es pública, cualquiera podría llamar al servicio: por eso existe el token.
+El servicio corre en la laptop: usa la GPU si existe y si no la CPU (se puede forzar con `QA_DEVICE=cpu`). `ngrok http 8000` crea una URL pública HTTPS que reenvía las peticiones a `localhost:8000`. Usamos el dominio fijo gratis de la cuenta (`run_tunnel.ps1` → `--url=https://hippo-neat-yearly.ngrok-free.app`), así la URL no cambia entre arranques. Como esa URL es pública, cualquiera podría llamar al servicio: por eso existe el token.
 
 ## 9. ¿Por qué no un decoder (GPT)?
 

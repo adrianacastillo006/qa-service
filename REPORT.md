@@ -8,7 +8,7 @@
 | Members | Miguel Ledezma, Marco Rosalez, Adriana Castillo, Juan Ramirez |
 | Repository URL | https://github.com/adrianacastillo006/qa-service |
 | `submission` commit hash | The commit tagged `submission` (a commit cannot contain its own hash: `git rev-parse --short submission`) |
-| Public service URL used at the dry run | `https://dc6f-190-62-86-130.ngrok-free.app` (ngrok); evidence in [`docs/dry_run/`](docs/dry_run/) |
+| Public service URL used at the dry run | `https://dc6f-190-62-86-130.ngrok-free.app` (ngrok, random URL); evidence in [`docs/dry_run/`](docs/dry_run/). From now on the service uses the account's static ngrok domain `https://hippo-neat-yearly.ngrok-free.app`, which does not change between runs. |
 | AI tools used (which, and for what) | Claude (Claude Code): scaffolding of `qa_engine.py`, `app.py`, `train.py` and the offline tests; running the two fine-tuning runs; prior-weighted threshold tuning; automating the dry-run screenshots; drafting this report. The team read, tested and adjusted every module. |
 
 ## 1. Model choice and justification
@@ -55,7 +55,7 @@
 - **Model loading:** at startup a background thread (`load_engine`) loads tokenizer and weights from `MODEL_DIR` on the GPU if available, else the CPU (`QA_DEVICE=cpu` forces it). It then runs a short and a ~5,000-character warm-up prediction. Until then `/health` returns `503 {"status":"loading"}`.
 - **Request flow:** token check → JSON parsing and strict Pydantic validation (types, lengths, no extra fields; else `400 bad_request`) → `QAEngine.predict` in a thread pool behind a lock. The question (≤ 128 tokens) and context are split into 384-token windows with stride 128, all run in one batch. Best span vs `[CLS]` → character offsets via `offset_mapping` → the answer is sliced from the original context. A final check enforces `context[start:start+len(answer)] == answer` (else `null`); unexpected errors return `500 internal_error`.
 - **Access control:** `is_authorized` (`app.py`) compares the whole `Authorization` header with `Bearer <QA_API_TOKEN>` using `hmac.compare_digest` (exact, case-sensitive, constant time), on `/info` and `/predict`. If the variable is unset, every request is rejected. The token lives only in the git-ignored `.env`; for the dry run we generated a random development token, as the instructor indicated.
-- **Tunnel:** ngrok (`ngrok http 8000`); backup: `cloudflared tunnel --url http://localhost:8000`.
+- **Tunnel:** ngrok on the account's static dev domain (`run_tunnel.ps1` → `ngrok http 8000 --url=https://hippo-neat-yearly.ngrok-free.app`, domain read from `NGROK_DOMAIN` in `.env`); backup: `cloudflared tunnel --url http://localhost:8000`.
 - **How to run** from a clean machine:
 
 ```bash
@@ -66,7 +66,7 @@ pip install -r requirements.txt
 cp .env.example .env      # set QA_API_TOKEN=<token> and TEAM_NAME=<team id>; never committed
 ./run_server.sh           # Windows: .\run_server.ps1  (uvicorn app:app --host 0.0.0.0 --port 8000 --workers 1)
 python scripts/check_service.py --url http://127.0.0.1:8000
-ngrok http 8000
+./run_tunnel.sh           # Windows: .\run_tunnel.ps1  (ngrok http 8000 --url=https://$NGROK_DOMAIN)
 ```
 
 ## 5. Results on the public sample set

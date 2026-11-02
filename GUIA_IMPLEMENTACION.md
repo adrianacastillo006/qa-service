@@ -172,18 +172,20 @@ Pero no ajusten el umbral solo para las 5 de muestra: el valor de `logs/threshol
 ngrok config add-authtoken <su authtoken de ngrok>
 ```
 
+Cada cuenta gratis de ngrok trae un **dominio fijo** (dashboard.ngrok.com → *Domains*). El nuestro es `hippo-neat-yearly.ngrok-free.app` y está en `.env` como `NGROK_DOMAIN`. Solo funciona con el authtoken de esa cuenta; si el túnel lo abre otra laptop con otra cuenta, pongan el dominio de esa cuenta o dejen `NGROK_DOMAIN` vacío (la URL será aleatoria y hay que enviarla al profesor).
+
 **4.2 Con el servidor corriendo**, en otra terminal:
 
 ```bash
-ngrok http 8000
+./run_tunnel.sh          # Windows: .\run_tunnel.ps1  (= ngrok http 8000 --url=https://$NGROK_DOMAIN)
 ```
 
-Copien la URL `https://<nombre>.ngrok-free.app`.
+La URL pública es siempre `https://hippo-neat-yearly.ngrok-free.app`.
 
 **4.3 Probar desde otra red** (por ejemplo, otra laptop con datos del celular):
 
 ```bash
-python scripts/check_service.py --url https://<nombre>.ngrok-free.app
+python scripts/check_service.py --url https://hippo-neat-yearly.ngrok-free.app
 ```
 
 **4.4 Respaldo:** instalen también Cloudflare (`cloudflared tunnel --url http://localhost:8000`). La URL cambia cada vez; si lo usan, envíen la nueva URL al profesor.

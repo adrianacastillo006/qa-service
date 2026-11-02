@@ -27,8 +27,12 @@ python train.py --base_model roberta-base --epochs 2 --logs_dir logs/roberta-bas
 cp .env.example .env                        # set QA_API_TOKEN and TEAM_NAME
 ./run_server.sh                             # Windows: .\run_server.ps1
 python scripts/check_service.py --url http://127.0.0.1:8000
-ngrok http 8000
+./run_tunnel.sh                             # Windows: .\run_tunnel.ps1 (ngrok; fixed URL if NGROK_DOMAIN is set)
 ```
+
+Public URL: `https://hippo-neat-yearly.ngrok-free.app`, the static ngrok dev domain of the
+account whose authtoken is configured on the serving laptop. On another ngrok account, set
+`NGROK_DOMAIN` to that account's domain or leave it empty to get a random URL.
 
 On Windows use `127.0.0.1` rather than `localhost` for local checks: `localhost`
 tries IPv6 first and adds ~2 s to every request.
